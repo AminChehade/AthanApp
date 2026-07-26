@@ -2,41 +2,48 @@ import React, { useState, useEffect, useRef } from 'react';
 
 export default function App() {
   const [time, setTime] = useState('');
-  const [milliseconds, setMilliseconds] = useState('000');
   const [dateStr, setDateStr] = useState('');
   const [hijriDate, setHijriDate] = useState('');
   const [city, setCity] = useState('Hassel');
   const [country, setCountry] = useState('Germany');
   const [timings, setTimings] = useState(null);
   const [hasselTemp, setHasselTemp] = useState('--');
+  const [humidity, setHumidity] = useState('--');
+  const [rainProb, setRainProb] = useState('--');
+  const [weatherCode, setWeatherCode] = useState(null);
+  
+  const [isAthkarPlaying, setIsAthkarPlaying] = useState(false);
 
-  const audioRef = useRef(null);
+  const currentAudioRef = useRef(null);
   const playedToday = useRef({});
 
-  useEffect(() => {
-    audioRef.current = new Audio('/azan.mp3');
+  const playAudio = (src, onEndedCallback) => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    const audio = new Audio(src);
+    currentAudioRef.current = audio;
+    if (onEndedCallback) {
+      audio.onended = onEndedCallback;
+    }
+    audio.play().catch((e) => console.error(`Fehler beim Abspielen von ${src}:`, e));
+  };
 
-    const unlockAudio = () => {
-      if (audioRef.current) {
-        audioRef.current.play().then(() => {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-        }).catch(() => {});
+  const toggleAthkar = (e) => {
+    e.stopPropagation(); // Verhindert Klick-Events auf dem Eltern-Element
+    
+    if (isAthkarPlaying) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
       }
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
+      setIsAthkarPlaying(false);
+    } else {
+      setIsAthkarPlaying(true);
+      playAudio('/athkar.mp3', () => setIsAthkarPlaying(false));
+    }
+  };
 
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-
-    return () => {
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
-  }, []);
-
-  // Wandelt westliche Zahlen in arabische Ziffern um (z.B. 1447 -> ١٤٤٧)
   const toArabicNumerals = (str) => {
     return String(str).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
   };
@@ -54,10 +61,7 @@ export default function App() {
     const newHours = Math.floor(totalMinutes / 60);
     const newMinutes = totalMinutes % 60;
 
-    const formattedHours = String(newHours).padStart(2, '0');
-    const formattedMinutes = String(newMinutes).padStart(2, '0');
-
-    return `${formattedHours}:${formattedMinutes}`;
+    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
   };
 
   const fetchPrayerTimes = async () => {
@@ -77,7 +81,6 @@ export default function App() {
         const dayAr = toArabicNumerals(hijri.day);
         const yearAr = toArabicNumerals(hijri.year);
         
-        // Vollständig arabisch formatiert
         const hijriString = `${dayAr} ${hijri.month.ar} ${yearAr} هـ`;
         setHijriDate(hijriString);
       }
@@ -88,18 +91,20 @@ export default function App() {
 
   const fetchHasselWeather = async () => {
     try {
-      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de&format=json`);
-      const geoData = await geoRes.json();
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=52.798&longitude=9.208&current=temperature_2m,relative_humidity_2m,weather_code&daily=precipitation_probability_max&timezone=auto`);
+      const data = await res.json();
 
-      if (geoData.results && geoData.results.length > 0) {
-        const { latitude, longitude } = geoData.results[0];
-        
-        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`);
-        const weatherData = await weatherRes.json();
-
-        if (weatherData && weatherData.current && typeof weatherData.current.temperature_2m === 'number') {
-          setHasselTemp(Math.round(weatherData.current.temperature_2m));
+      if (data && data.current) {
+        if (typeof data.current.temperature_2m === 'number') {
+          setHasselTemp(Math.round(data.current.temperature_2m));
         }
+        if (typeof data.current.relative_humidity_2m === 'number') {
+          setHumidity(data.current.relative_humidity_2m);
+        }
+        setWeatherCode(data.current.weather_code);
+      }
+      if (data && data.daily && data.daily.precipitation_probability_max) {
+        setRainProb(data.daily.precipitation_probability_max[0]);
       }
     } catch (e) {
       console.error('Fehler beim Laden des Wetters:', e);
@@ -113,65 +118,96 @@ export default function App() {
     return () => clearInterval(weatherInterval);
   }, [city, country]);
 
-  // Intervall für Uhrzeit & Millisekunden (läuft mit requestAnimationFrame für flüssige Millisekunden)
   useEffect(() => {
-    let animationFrameId;
-
-    const updateClock = () => {
+    const timer = setInterval(() => {
       const now = new Date();
       const currentHoursMin = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
       setTime(now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      setMilliseconds(String(now.getMilliseconds()).padStart(3, '0'));
       setDateStr(now.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase());
 
       if (timings) {
-        const checkPrayers = [
-          { key: 'Fajr', time: timings.Fajr },
-          { key: 'Dhuhr', time: timings.Dhuhr },
-          { key: 'Asr', time: timings.Asr },
-          { key: 'Maghrib', time: timings.Maghrib },
-          { key: 'Isha', time: timings.Isha },
+        const checkAudios = [
+          { key: 'Fajr', time: timings.Fajr, src: '/fajer.mp3' },
+          { key: 'Dhuhr', time: timings.Dhuhr, src: '/azan2.mp3' },
+          { key: 'Asr', time: timings.Asr, src: '/azan2.mp3' },
+          { key: 'Maghrib', time: timings.Maghrib, src: '/azan2.mp3' },
+          { key: 'Isha', time: timings.Isha, src: '/azan2.mp3' },
         ];
 
         const todayKey = now.toDateString();
 
-        checkPrayers.forEach((p) => {
-          const prayerTimeKey = `${todayKey}-${p.key}`;
-          if (p.time === currentHoursMin && !playedToday.current[prayerTimeKey]) {
-            playedToday.current[prayerTimeKey] = true;
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
-              audioRef.current.play().catch((e) => console.error('Audio blockiert:', e));
-            }
+        checkAudios.forEach((p) => {
+          const audioKey = `${todayKey}-${p.key}`;
+          if (p.time === currentHoursMin && !playedToday.current[audioKey]) {
+            playedToday.current[audioKey] = true;
+            setIsAthkarPlaying(false);
+            playAudio(p.src);
           }
         });
       }
+    }, 1000);
 
-      animationFrameId = requestAnimationFrame(updateClock);
-    };
-
-    animationFrameId = requestAnimationFrame(updateClock);
-
-    return () => cancelAnimationFrame(animationFrameId);
+    return () => clearInterval(timer);
   }, [timings]);
 
+  const renderWeatherIcon = (code) => {
+    if (code === null) return null;
+    if (code === 0) {
+      return (
+        <svg className="w-4 h-4 text-amber-400 inline" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z" clipRule="evenodd" />
+        </svg>
+      );
+    } else if (code >= 1 && code <= 3) {
+      return (
+        <svg className="w-4 h-4 text-stone-300 inline" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+        </svg>
+      );
+    } else if (code >= 51 && code <= 67) {
+      return (
+        <svg className="w-4 h-4 text-blue-400 inline" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-4 h-4 text-amber-400 inline" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+      </svg>
+    );
+  };
+
   const prayers = timings ? [
-    { nameAr: 'الفجر', time: timings.Fajr },
-    { nameAr: 'الشروق', time: timings.Sunrise },
-    { nameAr: 'الظهر', time: timings.Dhuhr },
-    { nameAr: 'العصر', time: timings.Asr },
-    { nameAr: 'المغرب', time: timings.Maghrib },
-    { nameAr: 'العشاء', time: timings.Isha },
+    { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
+    { nameAr: 'الشروق', time: timings.Sunrise, key: 'Sunrise' },
+    { nameAr: 'الظهر', time: timings.Dhuhr, key: 'Dhuhr' },
+    { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
+    { nameAr: 'المغرب', time: timings.Maghrib, key: 'Maghrib' },
+    { nameAr: 'العشاء', time: timings.Isha, key: 'Isha' },
   ] : [];
 
   return (
     <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden">
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Lateef:wght@400;700&display=swap');
+          .font-oriental { font-family: 'Amiri', serif; }
+          .font-oriental-soft { font-family: 'Lateef', cursive; }
+        `}
+      </style>
+
       <div className="w-[100vh] h-[100vw] rotate-[-90deg] bg-black text-amber-100 font-sans flex flex-col justify-between p-4 select-none box-border">
 
         {/* Header */}
-        <div className="w-full text-center border-b border-amber-500/30 pb-1.5 shrink-0 flex flex-col items-center justify-center gap-0.5">
-          <h1 className="text-xl font-serif font-bold tracking-widest text-amber-500 drop-shadow-[0_2px_5px_rgba(245,158,11,0.3)]">
+        <div className="w-full text-center border-b border-amber-500/30 pb-1.5 shrink-0 flex flex-col items-center justify-center gap-1">
+          <img 
+            src="/&.jpg" 
+            alt="Logo" 
+            className="w-17 h-17 object-cover rounded-full border border-amber-500/50 shadow-md"
+          />
+          <h1 className="text-3xl font-oriental font-bold tracking-widest text-amber-500 drop-shadow-[0_2px_5px_rgba(245,158,11,0.3)]">
             مواقيت الصلاة
           </h1>
         </div>
@@ -181,28 +217,33 @@ export default function App() {
           <span className="text-sm font-bold tracking-wider text-amber-400 uppercase">
             {city}
           </span>
-          <span className="text-sm font-bold font-mono text-amber-400">
-            {hasselTemp !== '--' ? `${hasselTemp}°C` : '--°C'}
-          </span>
+
+          <div className="flex items-center gap-2 text-sm font-bold font-mono text-amber-400">
+            <span className="flex items-center gap-1">
+              {renderWeatherIcon(weatherCode)}
+              {hasselTemp !== '--' ? `${hasselTemp}°C` : '--°C'}
+            </span>
+            <span className="text-xs text-sky-300 font-sans flex items-center gap-0.5" title="Luftfeuchtigkeit">
+              💦 {humidity}%
+            </span>
+            <span className="text-xs text-blue-400/90 font-sans flex items-center gap-0.5" title="Regenwahrscheinlichkeit">
+              🌧️ {rainProb}%
+            </span>
+          </div>
         </div>
 
-        {/* Hauptuhrzeit inkl. kleinen Millisekunden */}
+        {/* Hauptuhrzeit */}
         <div className="w-full bg-stone-900/80 border border-amber-500/30 rounded-xl p-3 shadow-2xl backdrop-blur-md shrink-0 my-1 text-center">
-          <div className="flex justify-center items-baseline gap-1 font-mono py-1">
-            <span className="text-5xl font-bold tracking-widest text-stone-100 drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]">
-              {time || '00:00:00'}
-            </span>
-            {/* <span className="text-xs text-amber-400/70 font-mono w-8 text-left">
-              .{milliseconds}
-            </span> */}
+          <div className="text-6xl font-bold tracking-widest text-stone-100 drop-shadow-[0_0_12px_rgba(255,255,255,0.2)] font-mono py-1">
+            {time || '00:00:00'}
           </div>
         </div>
 
         {/* ZENTRALE GEBETSZEITEN */}
         <div className="w-full flex-1 flex flex-col justify-center my-2 min-h-0">
-          <div className="flex justify-between items-center px-1 mb-1.5 shrink-0 text-xs font-serif text-amber-400">
+          <div className="flex justify-between items-center px-1 mb-1.5 shrink-0 text-sm font-oriental-soft text-amber-400">
             <span>{dateStr || '--.--.----'}</span>
-            <span dir="rtl">{hijriDate || '--'}</span>
+            <span dir="rtl" className="text-base">{hijriDate || '--'}</span>
           </div>
           <div className="flex flex-col justify-center flex-1 gap-1.5">
             {prayers.map((prayer, index) => (
@@ -210,9 +251,28 @@ export default function App() {
                 key={index}
                 className="grid grid-cols-2 items-center bg-stone-900/80 hover:bg-stone-900 border border-amber-500/30 px-6 py-2 rounded-lg shadow-md h-full transition-all"
               >
-                <span className="text-xl font-serif text-amber-200 text-left">
-                  {prayer.nameAr}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-oriental font-bold text-amber-200 text-left">
+                    {prayer.nameAr}
+                  </span>
+
+                  {/* Athkar-Button direkt bei Maghrib */}
+                  {prayer.key === 'Maghrib' && (
+                    <button
+                      onClick={toggleAthkar}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-oriental transition-all duration-300 border cursor-pointer flex items-center gap-1 ${
+                        isAthkarPlaying
+                          ? 'bg-amber-500 text-black border-amber-400 animate-pulse font-bold'
+                          : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+                      }`}
+                      title="أذكار المساء"
+                    >
+                      <span>{isAthkarPlaying ? '⏸' : '▶'}</span>
+                      <span>الأذكار</span>
+                    </button>
+                  )}
+                </div>
+
                 <span className="text-2xl font-bold text-amber-400 font-mono text-right">
                   {prayer.time}
                 </span>
