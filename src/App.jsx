@@ -4,8 +4,8 @@ export default function App() {
   const [time, setTime] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [hijriDate, setHijriDate] = useState('');
-  const [city, setCity] = useState('Hassel');
-  const [country, setCountry] = useState('Germany');
+  const [city] = useState('Hassel');
+  const [country] = useState('Germany');
   const [timings, setTimings] = useState(null);
   const [hasselTemp, setHasselTemp] = useState('--');
   const [humidity, setHumidity] = useState('--');
@@ -16,6 +16,12 @@ export default function App() {
 
   const currentAudioRef = useRef(null);
   const playedToday = useRef({});
+  const timingsRef = useRef(timings);
+
+  // Keep timingsRef in sync to avoid re-triggering main clock effect
+  useEffect(() => {
+    timingsRef.current = timings;
+  }, [timings]);
 
   const playAudio = (src, onEndedCallback) => {
     if (currentAudioRef.current) {
@@ -50,7 +56,6 @@ export default function App() {
     };
   }, []);
 
-  // Auf a.opus angepasst
   const toggleAthkar = (e) => {
     e.stopPropagation();
     
@@ -63,7 +68,7 @@ export default function App() {
       setIsAthkarPlaying(true);
       playAudio('/a.opus', () => setIsAthkarPlaying(false))
         .catch((err) => {
-          console.error('Athkar Audio konnte nicht geladen werden. Liegt "a.opus" im public-Ordner?', err);
+          console.error('Athkar Audio Fehler:', err);
           setIsAthkarPlaying(false);
         });
     }
@@ -73,7 +78,6 @@ export default function App() {
     return String(str).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
   };
 
-  // Frische Daten ohne Browser-Cache laden
   const fetchPrayerTimes = async () => {
     try {
       const timestamp = new Date().getTime();
@@ -119,8 +123,15 @@ export default function App() {
   useEffect(() => {
     fetchPrayerTimes();
     fetchHasselWeather();
+
+    // Refresh prayer times daily at midnight
+    const prayerInterval = setInterval(fetchPrayerTimes, 12 * 60 * 60 * 1000);
     const weatherInterval = setInterval(fetchHasselWeather, 60000);
-    return () => clearInterval(weatherInterval);
+
+    return () => {
+      clearInterval(prayerInterval);
+      clearInterval(weatherInterval);
+    };
   }, [city, country]);
 
   useEffect(() => {
@@ -134,12 +145,13 @@ export default function App() {
       setTime(now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       setDateStr(now.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase());
 
-      if (timings) {
-        const cleanFajr = timings.Fajr ? timings.Fajr.split(' ')[0] : '';
-        const cleanDhuhr = timings.Dhuhr ? timings.Dhuhr.split(' ')[0] : '';
-        const cleanAsr = timings.Asr ? timings.Asr.split(' ')[0] : '';
-        const cleanMaghrib = timings.Maghrib ? timings.Maghrib.split(' ')[0] : '';
-        const cleanIsha = timings.Isha ? timings.Isha.split(' ')[0] : '';
+      const currentTimings = timingsRef.current;
+      if (currentTimings) {
+        const cleanFajr = currentTimings.Fajr ? currentTimings.Fajr.split(' ')[0] : '';
+        const cleanDhuhr = currentTimings.Dhuhr ? currentTimings.Dhuhr.split(' ')[0] : '';
+        const cleanAsr = currentTimings.Asr ? currentTimings.Asr.split(' ')[0] : '';
+        const cleanMaghrib = currentTimings.Maghrib ? currentTimings.Maghrib.split(' ')[0] : '';
+        const cleanIsha = currentTimings.Isha ? currentTimings.Isha.split(' ')[0] : '';
 
         const checkAudios = [
           { key: 'Fajr', time: cleanFajr, src: '/fajer.mp3' },
@@ -168,7 +180,7 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timings]);
+  }, []);
 
   const renderWeatherIcon = (code) => {
     if (code === null) return null;
@@ -221,7 +233,6 @@ export default function App() {
 
         {/* Header */}
         <div className="w-full text-center border-b border-amber-500/30 pb-1.5 shrink-0 flex flex-col items-center justify-center gap-1">
-         
           <h1 className="text-3xl font-oriental font-bold tracking-widest text-amber-500 drop-shadow-[0_2px_5px_rgba(245,158,11,0.3)]">
             مواقيت الصلاة
           </h1>
@@ -238,10 +249,10 @@ export default function App() {
               {renderWeatherIcon(weatherCode)}
               {hasselTemp !== '--' ? `${hasselTemp}°C` : '--°C'}
             </span>
-            <span className="text-xs text-sky-300 font-sans flex items-center gap-0.5" title="Luftfeuchtigkeit">
+            <span className="text-sm text-sky-300 font-sans flex items-center gap-0.5" title="Luftfeuchtigkeit">
               💦 {humidity}%
             </span>
-            <span className="text-xs text-blue-400/90 font-sans flex items-center gap-0.5" title="Regenwahrscheinlichkeit">
+            <span className="text-sm text-blue-400/90 font-sans flex items-center gap-0.5" title="Regenwahrscheinlichkeit">
               🌧️ {rainProb}%
             </span>
           </div>
@@ -256,7 +267,7 @@ export default function App() {
 
         {/* ZENTRALE GEBETSZEITEN */}
         <div className="w-full flex-1 flex flex-col justify-center my-2 min-h-0">
-          <div className="flex justify-between items-center px-1 mb-1.5 shrink-0 text-sm font-oriental-soft text-amber-400">
+          <div className="flex justify-between items-center px-1 mb-1.5 shrink-0 text-xl font-oriental-soft text-green-400">
             <span>{dateStr || '--.--.----'}</span>
             <span dir="rtl" className="text-base">{hijriDate || '--'}</span>
           </div>
