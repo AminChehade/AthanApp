@@ -27,11 +27,32 @@ export default function App() {
     if (onEndedCallback) {
       audio.onended = onEndedCallback;
     }
-    audio.play().catch((e) => console.error(`Fehler beim Abspielen von ${src}:`, e));
+    return audio.play();
   };
 
+  useEffect(() => {
+    const unlockAudio = () => {
+      const dummyAudio = new Audio('/azan2.mp3');
+      dummyAudio.play().then(() => {
+        dummyAudio.pause();
+      }).catch(() => {});
+
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+
+  // Auf a.opus angepasst
   const toggleAthkar = (e) => {
-    e.stopPropagation(); // Verhindert Klick-Events auf dem Eltern-Element
+    e.stopPropagation();
     
     if (isAthkarPlaying) {
       if (currentAudioRef.current) {
@@ -40,7 +61,11 @@ export default function App() {
       setIsAthkarPlaying(false);
     } else {
       setIsAthkarPlaying(true);
-      playAudio('/athkar.mp3', () => setIsAthkarPlaying(false));
+      playAudio('/a.opus', () => setIsAthkarPlaying(false))
+        .catch((err) => {
+          console.error('Athkar Audio konnte nicht geladen werden. Liegt "a.opus" im public-Ordner?', err);
+          setIsAthkarPlaying(false);
+        });
     }
   };
 
@@ -48,34 +73,14 @@ export default function App() {
     return String(str).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
   };
 
-  const calculateIsha = (maghribStr) => {
-    if (!maghribStr) return '--:--';
-    const cleanTime = maghribStr.split(' ')[0];
-    const [hours, minutes] = cleanTime.split(':').map(Number);
-
-    if (isNaN(hours) || isNaN(minutes)) return maghribStr;
-
-    let totalMinutes = hours * 60 + minutes + 90;
-    totalMinutes = totalMinutes % (24 * 60);
-
-    const newHours = Math.floor(totalMinutes / 60);
-    const newMinutes = totalMinutes % 60;
-
-    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
-  };
-
+  // Frische Daten ohne Browser-Cache laden
   const fetchPrayerTimes = async () => {
     try {
-      const response = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=3`);
+      const timestamp = new Date().getTime();
+      const response = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=3&_t=${timestamp}`);
       const data = await response.json();
       if (data.code === 200) {
-        const fetchedTimings = { ...data.data.timings };
-
-        if (fetchedTimings.Maghrib) {
-          fetchedTimings.Isha = calculateIsha(fetchedTimings.Maghrib);
-        }
-
-        setTimings(fetchedTimings);
+        setTimings(data.data.timings);
 
         const hijri = data.data.date.hijri;
         const dayAr = toArabicNumerals(hijri.day);
@@ -121,28 +126,42 @@ export default function App() {
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      const currentHoursMin = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const currentHoursMin = `${hours}:${minutes}`;
 
       setTime(now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       setDateStr(now.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase());
 
       if (timings) {
+        const cleanFajr = timings.Fajr ? timings.Fajr.split(' ')[0] : '';
+        const cleanDhuhr = timings.Dhuhr ? timings.Dhuhr.split(' ')[0] : '';
+        const cleanAsr = timings.Asr ? timings.Asr.split(' ')[0] : '';
+        const cleanMaghrib = timings.Maghrib ? timings.Maghrib.split(' ')[0] : '';
+        const cleanIsha = timings.Isha ? timings.Isha.split(' ')[0] : '';
+
         const checkAudios = [
-          { key: 'Fajr', time: timings.Fajr, src: '/fajer.mp3' },
-          { key: 'Dhuhr', time: timings.Dhuhr, src: '/azan2.mp3' },
-          { key: 'Asr', time: timings.Asr, src: '/azan2.mp3' },
-          { key: 'Maghrib', time: timings.Maghrib, src: '/azan2.mp3' },
-          { key: 'Isha', time: timings.Isha, src: '/azan2.mp3' },
+          { key: 'Fajr', time: cleanFajr, src: '/fajer.mp3' },
+          { key: 'Dhuhr', time: cleanDhuhr, src: '/azan2.mp3' },
+          { key: 'Asr', time: cleanAsr, src: '/azan2.mp3' },
+          { key: 'Maghrib', time: cleanMaghrib, src: '/azan2.mp3' },
+          { key: 'Isha', time: cleanIsha, src: '/azan2.mp3' },
         ];
 
         const todayKey = now.toDateString();
 
         checkAudios.forEach((p) => {
           const audioKey = `${todayKey}-${p.key}`;
-          if (p.time === currentHoursMin && !playedToday.current[audioKey]) {
-            playedToday.current[audioKey] = true;
+          if (p.time && p.time === currentHoursMin && !playedToday.current[audioKey]) {
             setIsAthkarPlaying(false);
-            playAudio(p.src);
+            playAudio(p.src)
+              .then(() => {
+                playedToday.current[audioKey] = true;
+              })
+              .catch((e) => {
+                console.error(`Azan Abspiel-Fehler für ${p.key}:`, e);
+              });
           }
         });
       }
@@ -202,11 +221,7 @@ export default function App() {
 
         {/* Header */}
         <div className="w-full text-center border-b border-amber-500/30 pb-1.5 shrink-0 flex flex-col items-center justify-center gap-1">
-          <img 
-            src="/&.jpg" 
-            alt="Logo" 
-            className="w-17 h-17 object-cover rounded-full border border-amber-500/50 shadow-md"
-          />
+         
           <h1 className="text-3xl font-oriental font-bold tracking-widest text-amber-500 drop-shadow-[0_2px_5px_rgba(245,158,11,0.3)]">
             مواقيت الصلاة
           </h1>
@@ -218,7 +233,7 @@ export default function App() {
             {city}
           </span>
 
-          <div className="flex items-center gap-2 text-sm font-bold font-mono text-amber-400">
+          <div className="flex items-center gap-2 text-2xl shadow-2xl font-bold font-mono text-amber-400">
             <span className="flex items-center gap-1">
               {renderWeatherIcon(weatherCode)}
               {hasselTemp !== '--' ? `${hasselTemp}°C` : '--°C'}
@@ -234,7 +249,7 @@ export default function App() {
 
         {/* Hauptuhrzeit */}
         <div className="w-full bg-stone-900/80 border border-amber-500/30 rounded-xl p-3 shadow-2xl backdrop-blur-md shrink-0 my-1 text-center">
-          <div className="text-6xl font-bold tracking-widest text-stone-100 drop-shadow-[0_0_12px_rgba(255,255,255,0.2)] font-mono py-1">
+          <div className="text-5xl font-bold tracking-widest text-stone-100 drop-shadow-[0_0_12px_rgba(255,255,255,0.2)] font-mono py-1">
             {time || '00:00:00'}
           </div>
         </div>
@@ -256,7 +271,6 @@ export default function App() {
                     {prayer.nameAr}
                   </span>
 
-                  {/* Athkar-Button direkt bei Maghrib */}
                   {prayer.key === 'Maghrib' && (
                     <button
                       onClick={toggleAthkar}
