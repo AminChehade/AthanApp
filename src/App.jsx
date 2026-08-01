@@ -267,7 +267,7 @@ export default function App() {
 
         {/* ZENTRALE GEBETSZEITEN */}
         <div className="w-full flex-1 flex flex-col justify-center my-2 min-h-0">
-          <div className="flex justify-between items-center px-1 mb-1.5 shrink-0 text-xl font-oriental-soft text-green-400">
+          <div className="flex justify-between items-center px-1 mb-1.5 shrink-0 text-xl font-oriental-soft text-amber-400">
             <span>{dateStr || '--.--.----'}</span>
             <span dir="rtl" className="text-base">{hijriDate || '--'}</span>
           </div>
