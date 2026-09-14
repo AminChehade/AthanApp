@@ -156,7 +156,7 @@ export default function App() {
         const checkAudios = [
           { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
           { key: 'Dhuhr', nameAr: 'الظهر', time: cleanDhuhr, src: '/azan2.mp3' },
-          { key: 'Asr', nameAr: 'العصر', time: '16:06', src: '/azan2.mp3' },
+          { key: 'Asr', nameAr: 'العصر', time: '16:08', src: '/azan2.mp3' },
           // { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
           { key: 'Maghrib', nameAr: 'المغرب', time: cleanMaghrib, src: '/azan2.mp3' },
           { key: 'Isha', nameAr: 'العشاء', time: cleanIsha, src: '/azan2.mp3' },
@@ -219,7 +219,7 @@ export default function App() {
     { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
     { nameAr: 'الشروق', time: timings.Sunrise, key: 'Sunrise' },
     { nameAr: 'الظهر', time: timings.Dhuhr, key: 'Dhuhr' },
-    { nameAr: 'العصر', time: '16:06', key: 'Asr' },
+    { nameAr: 'العصر', time: '16:08', key: 'Asr' },
     // { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
     { nameAr: 'المغرب', time: timings.Maghrib, key: 'Maghrib' },
     { nameAr: 'العشاء', time: timings.Isha, key: 'Isha' },
