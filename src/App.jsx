@@ -156,7 +156,7 @@ export default function App() {
         const checkAudios = [
           { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
           { key: 'Dhuhr', nameAr: 'الظهر', time: cleanDhuhr, src: '/azan2.mp3' },
-          { key: 'Asr', nameAr: 'العصر', time: '16:00', src: '/azan2.mp3' },
+          { key: 'Asr', nameAr: 'العصر', time: '16:06', src: '/azan2.mp3' },
           // { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
           { key: 'Maghrib', nameAr: 'المغرب', time: cleanMaghrib, src: '/azan2.mp3' },
           { key: 'Isha', nameAr: 'العشاء', time: cleanIsha, src: '/azan2.mp3' },
