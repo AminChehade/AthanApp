@@ -13,6 +13,7 @@ export default function App() {
   const [weatherCode, setWeatherCode] = useState(null);
   
   const [isAthkarPlaying, setIsAthkarPlaying] = useState(false);
+  const [activeAzanOverlay, setActiveAzanOverlay] = useState(null);
 
   const currentAudioRef = useRef(null);
   const playedToday = useRef({});
@@ -124,7 +125,6 @@ export default function App() {
     fetchPrayerTimes();
     fetchHasselWeather();
 
-    // Refresh prayer times daily at midnight
     const prayerInterval = setInterval(fetchPrayerTimes, 12 * 60 * 60 * 1000);
     const weatherInterval = setInterval(fetchHasselWeather, 60000);
 
@@ -154,11 +154,12 @@ export default function App() {
         const cleanIsha = currentTimings.Isha ? currentTimings.Isha.split(' ')[0] : '';
 
         const checkAudios = [
-          { key: 'Fajr', time: cleanFajr, src: '/fajer.mp3' },
-          { key: 'Dhuhr', time: cleanDhuhr, src: '/azan2.mp3' },
-          { key: 'Asr', time: cleanAsr, src: '/azan2.mp3' },
-          { key: 'Maghrib', time: cleanMaghrib, src: '/azan2.mp3' },
-          { key: 'Isha', time: cleanIsha, src: '/azan2.mp3' },
+          { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
+          { key: 'Dhuhr', nameAr: 'الظهر', time: cleanDhuhr, src: '/azan2.mp3' },
+          { key: 'Asr', nameAr: 'العصر', time: '16:00', src: '/azan2.mp3' },
+          // { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
+          { key: 'Maghrib', nameAr: 'المغرب', time: cleanMaghrib, src: '/azan2.mp3' },
+          { key: 'Isha', nameAr: 'العشاء', time: cleanIsha, src: '/azan2.mp3' },
         ];
 
         const todayKey = now.toDateString();
@@ -167,7 +168,11 @@ export default function App() {
           const audioKey = `${todayKey}-${p.key}`;
           if (p.time && p.time === currentHoursMin && !playedToday.current[audioKey]) {
             setIsAthkarPlaying(false);
-            playAudio(p.src)
+            setActiveAzanOverlay({ nameAr: p.nameAr, time: p.time });
+
+            playAudio(p.src, () => {
+              setActiveAzanOverlay(null);
+            })
               .then(() => {
                 playedToday.current[audioKey] = true;
               })
@@ -229,7 +234,33 @@ export default function App() {
         `}
       </style>
 
-      <div className="w-[100vh] h-[100vw] rotate-[-90deg] bg-black text-amber-100 font-sans flex flex-col justify-between p-4 select-none box-border">
+      <div className="relative w-[100vh] h-[100vw] -rotate-90 bg-black text-amber-100 font-sans flex flex-col justify-between p-4 select-none box-border overflow-hidden">
+
+        {/* AZAN FULLSCREEN OVERLAY */}
+        {activeAzanOverlay && (
+          <div className="absolute inset-0 z-50 bg-black flex items-center justify-center">
+            <img
+              src="/athan.svg"
+              alt="Azan Visual"
+              className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+            />
+            {/* Zentrierte Gebetsdaten im Kreis des SVG */}
+            <div className="relative z-10 flex flex-col items-center justify-center text-center -mt-6 pointer-events-none">
+              <span className="text-amber-300 font-oriental text-3xl font-bold tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                حان الآن موعد صلاة
+              </span>
+              <span className="text-white font-oriental font-bold text-6xl my-2 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                {activeAzanOverlay.nameAr}
+              </span>
+              <span className="text-amber-400 font-mono font-bold text-4xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                {activeAzanOverlay.time}
+              </span>
+              <span className="text-stone-300 font-mono text-xl mt-3 tracking-widest opacity-80">
+                {time}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="w-full text-center border-b border-amber-500/30 pb-1.5 shrink-0 flex flex-col items-center justify-center gap-1">
