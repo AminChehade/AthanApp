@@ -219,7 +219,8 @@ export default function App() {
     { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
     { nameAr: 'الشروق', time: timings.Sunrise, key: 'Sunrise' },
     { nameAr: 'الظهر', time: timings.Dhuhr, key: 'Dhuhr' },
-    { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
+    { nameAr: 'العصر', time: '16:06', key: 'Asr' },
+    // { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
     { nameAr: 'المغرب', time: timings.Maghrib, key: 'Maghrib' },
     { nameAr: 'العشاء', time: timings.Isha, key: 'Isha' },
   ] : [];
