@@ -153,7 +153,8 @@ export default function App() {
         const cleanIsha = currentTimings.Isha ? currentTimings.Isha.split(' ')[0] : '';
 
         const checkAudios = [
-          { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
+          { key: 'Fajr', nameAr: 'الفجر', time: '05:11', src: '/fajer.mp3' },
+          // { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
           { key: 'Dhuhr', nameAr: 'الظهر', time: cleanDhuhr, src: '/azan2.mp3' },
           { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
           { key: 'Maghrib', nameAr: 'المغرب', time: cleanMaghrib, src: '/azan2.mp3' },
@@ -214,7 +215,8 @@ export default function App() {
   };
 
   const prayers = timings ? [
-    { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
+    { nameAr: 'الفجر', time: '05:09', key: 'Fajr' },
+    // { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
     { nameAr: 'الشروق', time: timings.Sunrise, key: 'Sunrise' },
     { nameAr: 'الظهر', time: timings.Dhuhr, key: 'Dhuhr' },
     { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
