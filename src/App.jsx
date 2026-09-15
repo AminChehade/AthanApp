@@ -153,8 +153,7 @@ export default function App() {
         const cleanIsha = currentTimings.Isha ? currentTimings.Isha.split(' ')[0] : '';
 
         const checkAudios = [
-          { key: 'Fajr', nameAr: 'الفجر', time: '05:11', src: '/fajer.mp3' },
-          // { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
+          { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
           { key: 'Dhuhr', nameAr: 'الظهر', time: cleanDhuhr, src: '/azan2.mp3' },
           { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
           { key: 'Maghrib', nameAr: 'المغرب', time: cleanMaghrib, src: '/azan2.mp3' },
@@ -215,8 +214,7 @@ export default function App() {
   };
 
   const prayers = timings ? [
-    { nameAr: 'الفجر', time: '05:09', key: 'Fajr' },
-    // { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
+    { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
     { nameAr: 'الشروق', time: timings.Sunrise, key: 'Sunrise' },
     { nameAr: 'الظهر', time: timings.Dhuhr, key: 'Dhuhr' },
     { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
@@ -225,7 +223,7 @@ export default function App() {
   ] : [];
 
   return (
-    <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden">
+    <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden p-2">
       <style>
         {`
           @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Lateef:wght@400;700&display=swap');
@@ -237,7 +235,8 @@ export default function App() {
         `}
       </style>
 
-      <div className="relative w-[100vh] h-[100vw] -rotate-90 bg-black text-amber-100 font-sans flex flex-col justify-between p-4 select-none box-border overflow-hidden">
+      {/* Haupt-Container: Normal ausgerichtet mit feinem roten Rahmen */}
+      <div className="relative w-full h-full max-w-full max-h-full border border-red-500/80 bg-black text-amber-100 font-sans flex flex-col justify-between p-4 select-none box-border overflow-hidden">
 
         {/* AZAN FULLSCREEN OVERLAY */}
         {activeAzanOverlay && (
@@ -256,7 +255,7 @@ export default function App() {
               <span className="text-white font-oriental font-bold text-6xl my-2 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
                 {activeAzanOverlay.nameAr}
               </span>
-              <span className="text-amber-400 font-mono font-bold text-4xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <span className="text-amber-400 font-mono font-bold text-4xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 {activeAzanOverlay.time}
               </span>
               <span className="text-stone-300 font-mono text-xl mt-3 tracking-widest opacity-80 drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)]">
