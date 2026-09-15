@@ -19,7 +19,6 @@ export default function App() {
   const playedToday = useRef({});
   const timingsRef = useRef(timings);
 
-  // Keep timingsRef in sync to avoid re-triggering main clock effect
   useEffect(() => {
     timingsRef.current = timings;
   }, [timings]);
@@ -156,8 +155,7 @@ export default function App() {
         const checkAudios = [
           { key: 'Fajr', nameAr: 'الفجر', time: cleanFajr, src: '/fajer.mp3' },
           { key: 'Dhuhr', nameAr: 'الظهر', time: cleanDhuhr, src: '/azan2.mp3' },
-          { key: 'Asr', nameAr: 'العصر', time: '16:08', src: '/azan2.mp3' },
-          // { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
+          { key: 'Asr', nameAr: 'العصر', time: cleanAsr, src: '/azan2.mp3' },
           { key: 'Maghrib', nameAr: 'المغرب', time: cleanMaghrib, src: '/azan2.mp3' },
           { key: 'Isha', nameAr: 'العشاء', time: cleanIsha, src: '/azan2.mp3' },
         ];
@@ -219,8 +217,7 @@ export default function App() {
     { nameAr: 'الفجر', time: timings.Fajr, key: 'Fajr' },
     { nameAr: 'الشروق', time: timings.Sunrise, key: 'Sunrise' },
     { nameAr: 'الظهر', time: timings.Dhuhr, key: 'Dhuhr' },
-    { nameAr: 'العصر', time: '16:08', key: 'Asr' },
-    // { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
+    { nameAr: 'العصر', time: timings.Asr, key: 'Asr' },
     { nameAr: 'المغرب', time: timings.Maghrib, key: 'Maghrib' },
     { nameAr: 'العشاء', time: timings.Isha, key: 'Isha' },
   ] : [];
@@ -230,6 +227,9 @@ export default function App() {
       <style>
         {`
           @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Lateef:wght@400;700&display=swap');
+          :root {
+            color-scheme: dark only;
+          }
           .font-oriental { font-family: 'Amiri', serif; }
           .font-oriental-soft { font-family: 'Lateef', cursive; }
         `}
@@ -239,24 +239,25 @@ export default function App() {
 
         {/* AZAN FULLSCREEN OVERLAY */}
         {activeAzanOverlay && (
-          <div className="absolute inset-0 z-50 bg-black flex items-center justify-center">
+          <div className="absolute inset-0 z-50 bg-[#050505] flex items-center justify-center">
             <img
               src="/athan.svg"
               alt="Azan Visual"
-              className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+              style={{ filter: 'none' }}
+              className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none bg-black"
             />
             {/* Zentrierte Gebetsdaten im Kreis des SVG */}
             <div className="relative z-10 flex flex-col items-center justify-center text-center -mt-6 pointer-events-none">
-              <span className="text-amber-300 font-oriental text-3xl font-bold tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <span className="text-amber-300 font-oriental text-3xl font-bold tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 حان الآن موعد صلاة
               </span>
               <span className="text-white font-oriental font-bold text-6xl my-2 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
                 {activeAzanOverlay.nameAr}
               </span>
-              <span className="text-amber-400 font-mono font-bold text-4xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <span className="text-amber-400 font-mono font-bold text-4xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 {activeAzanOverlay.time}
               </span>
-              <span className="text-stone-300 font-mono text-xl mt-3 tracking-widest opacity-80">
+              <span className="text-stone-300 font-mono text-xl mt-3 tracking-widest opacity-80 drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)]">
                 {time}
               </span>
             </div>
