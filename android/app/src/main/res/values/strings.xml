@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Athan Clock</string>
+    <string name="title_activity_main">Athan Clock</string>
+    <string name="package_name">com.athan.clock</string>
+    <string name="custom_url_scheme">com.athan.clock</string>
+</resources>
